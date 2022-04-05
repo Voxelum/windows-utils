@@ -1,6 +1,11 @@
 *.obj
 *.exp
-*.ipbd
-*.pbd
+*.ipdb
+*.pdb
 *.iobj
 *.tlog
+build/Release/obj
+*.vcxproj
+*.vcxproj.filters
+*.sln
+.vscode

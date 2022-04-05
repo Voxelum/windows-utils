@@ -1,41 +1,223 @@
-#include <napi.h>
 #include <Windows.h>
+#include <napi.h>
+#include <winrt/Windows.Foundation.Metadata.h>
 #include <winrt/Windows.ApplicationModel.h>
+#include <dwmapi.h>
 
 using namespace Windows::Foundation;
 using namespace Windows::ApplicationModel;
 
-std::string make_string(const std::wstring& wstring)
+#pragma comment(lib, "dwmapi.lib")
+#pragma comment(lib, "comctl32.lib")
+
+typedef enum _WINDOWCOMPOSITIONATTRIB
 {
-  auto wideData = wstring.c_str();
-  int bufferSize = WideCharToMultiByte(CP_UTF8, 0, wideData, -1, nullptr, 0, NULL, NULL);
-  auto utf8 = std::make_unique<char[]>(bufferSize);
-  if (0 == WideCharToMultiByte(CP_UTF8, 0, wideData, -1, utf8.get(), bufferSize, NULL, NULL))
-    throw std::exception("Can't convert string to UTF8");
+    WCA_UNDEFINED = 0,
+    WCA_NCRENDERING_ENABLED = 1,
+    WCA_NCRENDERING_POLICY = 2,
+    WCA_TRANSITIONS_FORCEDISABLED = 3,
+    WCA_ALLOW_NCPAINT = 4,
+    WCA_CAPTION_BUTTON_BOUNDS = 5,
+    WCA_NONCLIENT_RTL_LAYOUT = 6,
+    WCA_FORCE_ICONIC_REPRESENTATION = 7,
+    WCA_EXTENDED_FRAME_BOUNDS = 8,
+    WCA_HAS_ICONIC_BITMAP = 9,
+    WCA_THEME_ATTRIBUTES = 10,
+    WCA_NCRENDERING_EXILED = 11,
+    WCA_NCADORNMENTINFO = 12,
+    WCA_EXCLUDED_FROM_LIVEPREVIEW = 13,
+    WCA_VIDEO_OVERLAY_ACTIVE = 14,
+    WCA_FORCE_ACTIVEWINDOW_APPEARANCE = 15,
+    WCA_DISALLOW_PEEK = 16,
+    WCA_CLOAK = 17,
+    WCA_CLOAKED = 18,
+    WCA_ACCENT_POLICY = 19,
+    WCA_FREEZE_REPRESENTATION = 20,
+    WCA_EVER_UNCLOAKED = 21,
+    WCA_VISUAL_OWNER = 22,
+    WCA_HOLOGRAPHIC = 23,
+    WCA_EXCLUDED_FROM_DDA = 24,
+    WCA_PASSIVEUPDATEMODE = 25,
+    WCA_USEDARKMODECOLORS = 26,
+    WCA_LAST = 27
+} WINDOWCOMPOSITIONATTRIB;
 
-  return std::string(utf8.get());
+typedef enum _ACCENT_STATE
+{
+    ACCENT_DISABLED = 0,
+    ACCENT_ENABLE_GRADIENT = 1,
+    ACCENT_ENABLE_TRANSPARENTGRADIENT = 2,
+    ACCENT_ENABLE_BLURBEHIND = 3,
+    ACCENT_ENABLE_ACRYLICBLURBEHIND = 4,
+    ACCENT_ENABLE_HOSTBACKDROP = 5,
+    ACCENT_INVALID_STATE = 6
+} ACCENT_STATE;
+
+typedef struct _ACCENT_POLICY
+{
+    ACCENT_STATE AccentState;
+    DWORD AccentFlags;
+    DWORD GradientColor;
+    DWORD AnimationId;
+} ACCENT_POLICY;
+
+typedef struct _WINDOWCOMPOSITIONATTRIBDATA
+{
+    WINDOWCOMPOSITIONATTRIB Attrib;
+    PVOID pvData;
+    SIZE_T cbData;
+} WINDOWCOMPOSITIONATTRIBDATA;
+
+typedef BOOL(WINAPI *SetWindowCompositionAttribute)(HWND, WINDOWCOMPOSITIONATTRIBDATA *);
+
+typedef LONG NTSTATUS, *PNTSTATUS;
+#define STATUS_SUCCESS (0x00000000)
+
+typedef NTSTATUS(WINAPI *RtlGetVersionPtr)(PRTL_OSVERSIONINFOW);
+
+namespace
+{
+HMODULE hmodule_win32;
 }
 
-Napi::String GetURI(const Napi::CallbackInfo& info) {
-  try {
-    Package^ package = Package::Current;
-    if (package) {
-      AppInstallerInfo^ app = package->GetAppInstallerInfo();
-      Platform::String^ platformString = app->Uri->ToString();
-      std::wstring wstr(platformString->Data());
-      Napi::String uriJs = Napi::String::New(info.Env(), make_string(wstr));
+std::string make_string(const std::wstring &wstring)
+{
+    auto wideData = wstring.c_str();
+    int bufferSize = WideCharToMultiByte(CP_UTF8, 0, wideData, -1, nullptr, 0, NULL, NULL);
+    auto utf8 = std::make_unique<char[]>(bufferSize);
+    if (0 == WideCharToMultiByte(CP_UTF8, 0, wideData, -1, utf8.get(), bufferSize, NULL, NULL))
+        throw std::exception("Can't convert string to UTF8");
 
-      return uriJs;
-    } else {
-      return Napi::String::New(info.Env(), "");
+    return std::string(utf8.get());
+}
+
+Napi::String GetURI(const Napi::CallbackInfo &info)
+{
+    if (winrt::Windows::Foundation::Metadata::ApiInformation::IsApiContractPresent(
+            L"Windows.Foundation.UniversalApiContract", 7))
+    {
+        try
+        {
+            Package ^ package = Package::Current;
+            if (package)
+            {
+                AppInstallerInfo ^ app = package->GetAppInstallerInfo();
+                if (app)
+                {
+                    Platform::String ^ platformString = app->Uri->ToString();
+                    std::wstring wstr(platformString->Data());
+                    Napi::String uriJs = Napi::String::New(info.Env(), make_string(wstr));
+                    return uriJs;
+                }
+            }
+            return Napi::String::New(info.Env(), "");
+        }
+        catch (...)
+        {
+            return Napi::String::New(info.Env(), "");
+        }
     }
-  } catch (...) {
     return Napi::String::New(info.Env(), "");
-  }
 }
 
-Napi::Object Init(Napi::Env env, Napi::Object exports) {
-  return Napi::Function::New(env, GetURI, "getAppInstallerUri");
+Napi::Object GetWindowsVersion(const Napi::CallbackInfo &info)
+{
+    Napi::Object result = Napi::Object::New(info.Env());
+
+    HMODULE hmodule = ::GetModuleHandleW(L"ntdll.dll");
+    if (hmodule)
+    {
+        RtlGetVersionPtr rtl_get_version_ptr = (RtlGetVersionPtr)::GetProcAddress(hmodule, "RtlGetVersion");
+        if (rtl_get_version_ptr != nullptr)
+        {
+            RTL_OSVERSIONINFOW rovi = {0};
+            rovi.dwOSVersionInfoSize = sizeof(rovi);
+            if (STATUS_SUCCESS == rtl_get_version_ptr(&rovi))
+            {
+                result.Set("major", rovi.dwMajorVersion);
+                result.Set("minor", rovi.dwMinorVersion);
+                result.Set("build", rovi.dwBuildNumber);
+                FreeLibrary(hmodule);
+                return result;
+            }
+        }
+        FreeLibrary(hmodule);
+    }
+    result.Set("major", 0);
+    result.Set("minor", 0);
+    result.Set("build", 0);
+
+    return result;
+}
+
+Napi::Boolean SetMica(const Napi::CallbackInfo &info) {
+    Napi::ArrayBuffer buf = info[0].As<Napi::ArrayBuffer>();
+    const HWND *array = reinterpret_cast<HWND *>(buf.Data());
+    HWND hwnd(array[0]);
+
+    bool enabled = info[1].As<Napi::Boolean>();
+    BOOL enabledBOOL = enabled ? TRUE : FALSE;
+    bool succeeded = SUCCEEDED(::DwmSetWindowAttribute(hwnd, 1029 /* mica */, &enabledBOOL, sizeof(enabledBOOL)));
+
+    return Napi::Boolean::New(info.Env(), succeeded);
+}
+
+Napi::Boolean SetWindowBlur(const Napi::CallbackInfo &info)
+{
+    if (!hmodule_win32)
+    {
+        hmodule_win32 = ::GetModuleHandleW(L"user32.dll");
+    }
+    if (hmodule_win32)
+    {
+        SetWindowCompositionAttribute set_window_composition_attribute_ =
+            (SetWindowCompositionAttribute)::GetProcAddress(hmodule_win32, "SetWindowCompositionAttribute");
+        Napi::ArrayBuffer buf = info[0].As<Napi::ArrayBuffer>();
+        int effect = info[1].As<Napi::Number>();
+
+        const HWND *array = reinterpret_cast<HWND *>(buf.Data());
+        HWND hwnd(array[0]);
+
+        ACCENT_STATE state = ACCENT_DISABLED;
+        switch (effect)
+        {
+        case 1:
+            state = ACCENT_ENABLE_GRADIENT;
+            break;
+        case 2:
+            state = ACCENT_ENABLE_TRANSPARENTGRADIENT;
+            break;
+        case 3:
+            state = ACCENT_ENABLE_BLURBEHIND;
+            break;
+        case 4:
+            state = ACCENT_ENABLE_ACRYLICBLURBEHIND;
+            break;
+        case 5:
+            state = ACCENT_ENABLE_HOSTBACKDROP;
+            break;
+        }
+
+        ACCENT_POLICY accent = {state, 2, static_cast<DWORD>(0x00FFFFFF), 0};
+
+        WINDOWCOMPOSITIONATTRIBDATA data;
+        data.Attrib = WCA_ACCENT_POLICY;
+        data.pvData = &accent;
+        data.cbData = sizeof(accent);
+
+        set_window_composition_attribute_(hwnd, &data);
+        return Napi::Boolean::New(info.Env(), true);
+    }
+    return Napi::Boolean::New(info.Env(), false);
+}
+
+Napi::Object Init(Napi::Env env, Napi::Object exports)
+{
+    exports.Set("getAppInstallerUri", Napi::Function::New(env, GetURI, "getAppInstallerUri"));
+    exports.Set("getWindowsVersion", Napi::Function::New(env, GetWindowsVersion, "getWindowsVersion"));
+    exports.Set("setWindowBlur", Napi::Function::New(env, SetWindowBlur, "setWindowBlur"));
+    exports.Set("setMica", Napi::Function::New(env, SetMica, "setMica"));
+    return exports;
 }
 
 NODE_API_MODULE(addon, Init)

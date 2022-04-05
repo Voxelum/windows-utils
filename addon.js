@@ -1,5 +1,1 @@
-var addon = require('./build/Release/addon.node');
-
-module.exports = {
-    getAppInstallerUri: addon
-};
+module.exports = require('./build/Release/windows-utils.node');

@@ -1,6 +1,9 @@
 {
   "name": "@xmcl/windows-utils",
   "version": "0.0.1",
+  "publishConfig": {
+    "access": "public"
+  },
   "description": "Provide some native util functions on Windows",
   "main": "addon.js",
   "scripts": {
@@ -10,7 +13,7 @@
   },
   "author": "ci010 <cijhn@hotmail.com>",
   "license": "MIT",
-  "dependencies": {
+  "devDependencies": {
     "node-addon-api": "^4.3.0"
   }
 }

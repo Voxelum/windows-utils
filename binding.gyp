@@ -6,14 +6,14 @@
   "includes": ["common.gypi"],
   "targets": [
     {
-      "target_name": "addon",
+      "target_name": "windows-utils",
       "cflags!": [ "-fno-exceptions" ],
       "cflags_cc!": [ "-fno-exceptions" ],
-      "sources": [ ],
+      "sources": [ "addon.cc" ],
       "include_dirs": [
         "<!@(node -p \"require('node-addon-api').include\")"
       ],
-      'defines': [ 'NAPI_DISABLE_CPP_EXCEPTIONS' ],
+      'defines': [ ],
       "conditions": [
         ["OS=='win'", {
           "libraries": ["-lruntimeobject.lib"],
@@ -26,8 +26,6 @@
             "VCCLCompilerTool": {
               "AdditionalUsingDirectories": [
                 "%ProgramFiles(x86)%/Microsoft Visual Studio 14.0/VC/lib/store/references",
-                "%ProgramFiles%/Microsoft Visual Studio 14.0/VC/lib/store/references",
-                "%ProgramFiles%/Microsoft Visual Studio 14.0/VC/lib/store/references",
                 "%ProgramFiles%/Microsoft Visual Studio 14.0/VC/lib/store/references",
                 "%ProgramFiles%/Microsoft Visual Studio/2017/BuildTools/VC/Tools/MSVC/14.16.27023/lib/x86/store/references"
               ]
@@ -53,6 +51,9 @@
         "VCCLCompilerTool": {
           "AdditionalOptions": ["/ZW", "/std:c++17"],
           "DisableSpecificWarnings": [4609]
+        },
+        "VCLinkerTool": {
+          "GenerateDebugInformation": "false"
         }
       }
     }
