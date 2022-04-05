@@ -1,0 +1,16 @@
+{
+  "name": "@xmcl/windows-utils",
+  "version": "0.0.1",
+  "description": "Provide some native util functions on Windows",
+  "main": "addon.js",
+  "scripts": {
+    "build": "node-gyp build",
+    "config": "node-gyp configure",
+    "test": "node test.js"
+  },
+  "author": "ci010 <cijhn@hotmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "node-addon-api": "^4.3.0"
+  }
+}
