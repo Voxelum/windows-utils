@@ -6,8 +6,18 @@ export function createShortcut(exePath: string, destination: string, arguments: 
 export function getPackageFamilyName(): string
 export function checkUpdateAvailabilityAsync(callback: (status: number) => void): boolean
 
-declare enum AccentState
-{
+export interface InstallProgressHandler {
+    (event: 'progress', state: DeploymentProgressState, progress: number): void
+    (event: 'complete', errorText: string): void
+}
+export function installUpdateByAppInstaller(appInstallerUri: string, callback: InstallProgressHandler): boolean
+
+declare enum DeploymentProgressState {
+    Queued = 0,
+    Processing = 1,
+}
+
+declare enum AccentState {
     ACCENT_DISABLED = 0,
     ACCENT_ENABLE_GRADIENT = 1,
     ACCENT_ENABLE_TRANSPARENTGRADIENT = 2,
