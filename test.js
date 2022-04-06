@@ -1,6 +1,12 @@
-const { getAppInstallerUri, getWindowsVersion, setMica, setWindowBlur, createShortcut } = require('./addon')
+const { getAppInstallerUri, getWindowsVersion, setMica, setWindowBlur, createShortcut, getPackageFamilyName, checkUpdateAvailabilityAsync } = require('./addon')
 console.log(getAppInstallerUri())
 console.log(getWindowsVersion())
 console.log(setMica)
 console.log(setWindowBlur)
 console.log(createShortcut)
+console.log(getPackageFamilyName)
+console.log(typeof getPackageFamilyName())
+console.log(checkUpdateAvailabilityAsync)
+console.log(checkUpdateAvailabilityAsync((s) => {
+    console.log(s)
+}))

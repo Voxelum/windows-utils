@@ -122,8 +122,7 @@ Napi::String GetURI(const Napi::CallbackInfo &info)
                 {
                     Platform::String ^ platformString = app->Uri->ToString();
                     std::wstring wstr(platformString->Data());
-                    Napi::String uriJs = Napi::String::New(info.Env(), make_string(wstr));
-                    return uriJs;
+                    return Napi::String::New(info.Env(), make_string(wstr));
                 }
             }
             return Napi::String::New(info.Env(), "");
@@ -134,6 +133,66 @@ Napi::String GetURI(const Napi::CallbackInfo &info)
         }
     }
     return Napi::String::New(info.Env(), "");
+}
+
+Napi::String GetPackageFamilyName(const Napi::CallbackInfo &info)
+{
+    if (winrt::Windows::Foundation::Metadata::ApiInformation::IsApiContractPresent(
+            L"Windows.Foundation.UniversalApiContract", 1))
+    {
+        try
+        {
+            Package ^ package = Package::Current;
+            Platform::String ^ name = package->Id->FamilyName;
+            std::wstring wstr(name->Data());
+            return Napi::String::New(info.Env(), make_string(wstr));
+        }
+        catch (...)
+        {
+            return Napi::String::New(info.Env(), "");
+        }
+    }
+    return Napi::String::New(info.Env(), "");
+}
+
+Napi::Boolean CheckUpdateAvailabilityAsync(const Napi::CallbackInfo &info)
+{
+    if (winrt::Windows::Foundation::Metadata::ApiInformation::IsApiContractPresent(
+            L"Windows.Foundation.UniversalApiContract", 7))
+    {
+        try
+        {
+            Package ^ package = Package::Current;
+
+            Napi::Function cb = info[0].As<Napi::Function>();
+            auto *context = new Napi::Reference<Napi::Value>(Napi::Persistent(info.This()));
+            Napi::ThreadSafeFunction threadSafeCall =
+                Napi::ThreadSafeFunction::New(info.Env(), cb,
+                                              "", // resource name
+                                              0,  // Unlimited queue
+                                              1   // Only one thread will use this initially
+                );
+
+            IAsyncOperation<PackageUpdateAvailabilityResult ^> ^ op = package->CheckUpdateAvailabilityAsync();
+            op->Completed = ref new AsyncOperationCompletedHandler<PackageUpdateAvailabilityResult ^>(
+                [&threadSafeCall](IAsyncOperation<PackageUpdateAvailabilityResult ^> ^ sender,
+                                  AsyncStatus const /* asyncStatus */) {
+                    PackageUpdateAvailabilityResult ^ result = sender->GetResults();
+                    int *availability = new int(static_cast<int>(result->Availability));
+                    threadSafeCall.BlockingCall(availability, [](Napi::Env env, Napi::Function func, int *data) {
+                        func.Call({Napi::Number::New(env, *data)});
+                        delete data;
+                    });
+                    threadSafeCall.Release();
+                });
+            return Napi::Boolean::New(info.Env(), true);
+        }
+        catch (...)
+        {
+            return Napi::Boolean::New(info.Env(), false);
+        }
+    }
+    return Napi::Boolean::New(info.Env(), false);
 }
 
 Napi::Object GetWindowsVersion(const Napi::CallbackInfo &info)
@@ -275,6 +334,9 @@ Napi::Object Init(Napi::Env env, Napi::Object exports)
     exports.Set("setWindowBlur", Napi::Function::New(env, SetWindowBlur, "setWindowBlur"));
     exports.Set("setMica", Napi::Function::New(env, SetMica, "setMica"));
     exports.Set("createShortcut", Napi::Function::New(env, CreateShortcut, "createShortcut"));
+    exports.Set("getPackageFamilyName", Napi::Function::New(env, GetPackageFamilyName, "getPackageFamilyName"));
+    exports.Set("checkUpdateAvailabilityAsync",
+                Napi::Function::New(env, CheckUpdateAvailabilityAsync, "checkUpdateAvailabilityAsync"));
     return exports;
 }
 

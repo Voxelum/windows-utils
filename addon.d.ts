@@ -3,6 +3,8 @@ export function getWindowsVersion(): { major: number; minor: number; build: numb
 export function setWindowBlur(hwnd: ArrayBuffer, effect: AccentState): boolean
 export function setMica(hwnd: ArrayBuffer, enabled: boolean): boolean
 export function createShortcut(exePath: string, destination: string, arguments: string, description: string, cwd: string, iconPath: string): boolean
+export function getPackageFamilyName(): string
+export function checkUpdateAvailabilityAsync(callback: (status: number) => void): boolean
 
 declare enum AccentState
 {
