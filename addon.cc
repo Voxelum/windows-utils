@@ -157,66 +157,89 @@ Napi::String GetPackageFamilyName(const Napi::CallbackInfo &info)
     return Napi::String::New(info.Env(), "");
 }
 
-Napi::Boolean InstallUpdateByAppInstaller(const Napi::CallbackInfo &info)
+Napi::Value InstallUpdateByAppInstaller(const Napi::CallbackInfo &info)
 {
     if (winrt::Windows::Foundation::Metadata::ApiInformation::IsApiContractPresent(
             L"Windows.Foundation.UniversalApiContract", 5))
     {
-        try {
+        try
+        {
             PackageManager ^ manager = ref new PackageManager();
             std::wstring appinstallerUrl = make_wstring(info[0].As<Napi::String>());
             PackageVolume ^ vol = manager->GetDefaultPackageVolume();
             Platform::String ^ uriStr = ref new Platform::String(appinstallerUrl.c_str());
             Uri ^ uri = ref new Uri(uriStr);
 
-            Napi::Function cb = info[1].As<Napi::Function>();
-            Napi::ThreadSafeFunction threadSafeCall =
-                Napi::ThreadSafeFunction::New(info.Env(), cb,
-                                            "", // resource name
-                                            0,  // Unlimited queue
-                                            1   // Only one thread will use this initially
+            Napi::ThreadSafeFunction progressCb =
+                Napi::ThreadSafeFunction::New(info.Env(), info[1].As<Napi::Function>(),
+                                              "", // resource name
+                                              0,  // Unlimited queue
+                                              1   // Only one thread will use this initially
+                );
+
+            Napi::ThreadSafeFunction completeCb =
+                Napi::ThreadSafeFunction::New(info.Env(), info[2].As<Napi::Function>(),
+                                              "", // resource name
+                                              0,  // Unlimited queue
+                                              1   // Only one thread will use this initially
                 );
 
             IAsyncOperationWithProgress<DeploymentResult ^, DeploymentProgress> ^ op =
                 manager->AddPackageByAppInstallerFileAsync(uri, AddPackageByAppInstallerOptions::ForceTargetAppShutdown,
-                                                        vol);
+                                                           vol);
 
             op->Progress = ref new AsyncOperationProgressHandler<DeploymentResult ^, DeploymentProgress>(
-                [&threadSafeCall](IAsyncOperationWithProgress<DeploymentResult ^, DeploymentProgress> ^ sender,
-                                DeploymentProgress progress) {
+                [&progressCb](IAsyncOperationWithProgress<DeploymentResult ^, DeploymentProgress> ^ sender,
+                              DeploymentProgress progress) {
                     auto state = progress.state;
                     auto percentage = progress.percentage;
                     uint32_t *data = new uint32_t[2];
                     data[0] = static_cast<uint32_t>(state);
                     data[1] = percentage;
 
-                    threadSafeCall.BlockingCall(data, [](Napi::Env env, Napi::Function func, uint32_t *data) {
-                        func.Call({Napi::String::New(env, "progress"), Napi::Number::New(env, data[0]), Napi::Number::New(env, data[1])});
+                    progressCb.BlockingCall(data, [](Napi::Env env, Napi::Function func, uint32_t *data) {
+                        func.Call({Napi::Number::New(env, data[0]),
+                                   Napi::Number::New(env, data[1])});
                         delete data;
                     });
                 });
 
             op->Completed = ref new AsyncOperationWithProgressCompletedHandler<DeploymentResult ^, DeploymentProgress>(
-                [&threadSafeCall](IAsyncOperationWithProgress<DeploymentResult ^, DeploymentProgress> ^ sender, AsyncStatus const /* asyncStatus */) {
+                [&progressCb, &completeCb](IAsyncOperationWithProgress<DeploymentResult ^, DeploymentProgress> ^ sender,
+                              AsyncStatus const /* asyncStatus */) {
                     DeploymentResult ^ result = sender->GetResults();
                     Platform::String ^ errorText = result->ErrorText;
                     std::wstring errorTextW(errorText->Data());
                     std::string *errorTextA = new std::string(make_string(errorTextW));
 
-                    threadSafeCall.BlockingCall(errorTextA, [](Napi::Env env, Napi::Function func, std::string *data) {
-                        func.Call({Napi::String::New(env, "complete"), Napi::String::New(env, *data)});
+                    completeCb.BlockingCall(errorTextA, [](Napi::Env env, Napi::Function func, std::string *data) {
+                        func.Call({Napi::String::New(env, *data)});
                         delete data;
                     });
-                    threadSafeCall.Release();
+                    progressCb.Release();
+                    completeCb.Release();
                 });
-        } catch (...) {
-            return Napi::Boolean::New(info.Env(), false);
+
+            Napi::Function cancel = Napi::Function::New(
+                info.Env(),
+                [&op](const Napi::CallbackInfo &info) {
+                    if (op->Status == AsyncStatus::Started)
+                    {
+                        op->Cancel();
+                    }
+                },
+                "cancel");
+            return cancel;
+        }
+        catch (...)
+        {
+            return Napi::Value::Value();
         }
 
-        return Napi::Boolean::New(info.Env(), true);
+        return Napi::Value::Value();
     }
 
-    return Napi::Boolean::New(info.Env(), false);
+    return Napi::Value::Value();
 }
 
 Napi::Boolean CheckUpdateAvailabilityAsync(const Napi::CallbackInfo &info)
@@ -258,10 +281,8 @@ Napi::Boolean CheckUpdateAvailabilityAsync(const Napi::CallbackInfo &info)
     return Napi::Boolean::New(info.Env(), false);
 }
 
-Napi::Object GetWindowsVersion(const Napi::CallbackInfo &info)
+Napi::Value GetWindowsVersion(const Napi::CallbackInfo &info)
 {
-    Napi::Object result = Napi::Object::New(info.Env());
-
     HMODULE hmodule = ::GetModuleHandleW(L"ntdll.dll");
     if (hmodule)
     {
@@ -272,6 +293,7 @@ Napi::Object GetWindowsVersion(const Napi::CallbackInfo &info)
             rovi.dwOSVersionInfoSize = sizeof(rovi);
             if (STATUS_SUCCESS == rtl_get_version_ptr(&rovi))
             {
+                Napi::Object result = Napi::Object::New(info.Env());
                 result.Set("major", rovi.dwMajorVersion);
                 result.Set("minor", rovi.dwMinorVersion);
                 result.Set("build", rovi.dwBuildNumber);
@@ -281,11 +303,8 @@ Napi::Object GetWindowsVersion(const Napi::CallbackInfo &info)
         }
         FreeLibrary(hmodule);
     }
-    result.Set("major", 0);
-    result.Set("minor", 0);
-    result.Set("build", 0);
 
-    return result;
+    return Napi::Value();
 }
 
 Napi::Boolean SetMica(const Napi::CallbackInfo &info)
@@ -398,7 +417,8 @@ Napi::Object Init(Napi::Env env, Napi::Object exports)
     exports.Set("setMica", Napi::Function::New(env, SetMica, "setMica"));
     exports.Set("createShortcut", Napi::Function::New(env, CreateShortcut, "createShortcut"));
     exports.Set("getPackageFamilyName", Napi::Function::New(env, GetPackageFamilyName, "getPackageFamilyName"));
-    exports.Set("installUpdateByAppInstaller", Napi::Function::New(env, InstallUpdateByAppInstaller, "installUpdateByAppInstaller"));
+    exports.Set("installUpdateByAppInstaller",
+                Napi::Function::New(env, InstallUpdateByAppInstaller, "installUpdateByAppInstaller"));
     exports.Set("checkUpdateAvailabilityAsync",
                 Napi::Function::New(env, CheckUpdateAvailabilityAsync, "checkUpdateAvailabilityAsync"));
     return exports;
