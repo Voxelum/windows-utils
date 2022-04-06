@@ -1,5 +1,6 @@
-const { getAppInstallerUri, getWindowsVersion, setMica, setWindowBlur } = require('./addon')
+const { getAppInstallerUri, getWindowsVersion, setMica, setWindowBlur, createShortcut } = require('./addon')
 console.log(getAppInstallerUri())
 console.log(getWindowsVersion())
 console.log(setMica)
 console.log(setWindowBlur)
+console.log(createShortcut)

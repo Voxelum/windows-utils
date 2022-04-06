@@ -1,1 +1,5 @@
-module.exports = require('./build/Release/windows-utils.node');
+const native = require('./build/Release/windows-utils.node');
+
+module.exports = {
+    ...native,
+}

@@ -1,8 +1,13 @@
 #include <Windows.h>
-#include <napi.h>
-#include <winrt/Windows.Foundation.Metadata.h>
-#include <winrt/Windows.ApplicationModel.h>
 #include <dwmapi.h>
+#include <napi.h>
+#include <winrt/Windows.ApplicationModel.h>
+#include <winrt/Windows.Foundation.Metadata.h>
+
+#include "objbase.h"
+#include "objidl.h"
+#include "shlguid.h"
+#include "shobjidl.h"
 
 using namespace Windows::Foundation;
 using namespace Windows::ApplicationModel;
@@ -80,6 +85,17 @@ namespace
 HMODULE hmodule_win32;
 }
 
+std::wstring make_wstring(std::string &&string)
+{
+    auto utf8Data = string.c_str();
+    int bufferSize = MultiByteToWideChar(CP_UTF8, 0, utf8Data, -1, nullptr, 0);
+    auto wide = std::make_unique<wchar_t[]>(bufferSize);
+    if (0 == MultiByteToWideChar(CP_UTF8, 0, utf8Data, -1, wide.get(), bufferSize))
+        throw std::exception("Can't convert string to Unicode");
+
+    return std::wstring(wide.get());
+}
+
 std::string make_string(const std::wstring &wstring)
 {
     auto wideData = wstring.c_str();
@@ -150,7 +166,8 @@ Napi::Object GetWindowsVersion(const Napi::CallbackInfo &info)
     return result;
 }
 
-Napi::Boolean SetMica(const Napi::CallbackInfo &info) {
+Napi::Boolean SetMica(const Napi::CallbackInfo &info)
+{
     Napi::ArrayBuffer buf = info[0].As<Napi::ArrayBuffer>();
     const HWND *array = reinterpret_cast<HWND *>(buf.Data());
     HWND hwnd(array[0]);
@@ -211,12 +228,53 @@ Napi::Boolean SetWindowBlur(const Napi::CallbackInfo &info)
     return Napi::Boolean::New(info.Env(), false);
 }
 
+Napi::Boolean CreateShortcut(const Napi::CallbackInfo &info)
+{
+    std::wstring exePath = make_wstring(info[0].As<Napi::String>());
+    std::wstring destPath = make_wstring(info[1].As<Napi::String>());
+    std::wstring arguments = make_wstring(info[2].As<Napi::String>());
+    std::wstring comment = make_wstring(info[3].As<Napi::String>());
+    std::wstring cwd = make_wstring(info[4].As<Napi::String>());
+    std::wstring iconPath = make_wstring(info[5].As<Napi::String>());
+
+    HRESULT hr;
+    IShellLinkW *psl;
+
+    hr = CoCreateInstance(CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, IID_IShellLink, (LPVOID *)&psl);
+    if (SUCCEEDED(hr))
+    {
+        IPersistFile *ppf;
+
+        // Set the path to the shortcut target and add the description.
+        psl->SetPath(exePath.c_str());
+        psl->SetDescription(comment.c_str());
+        psl->SetArguments(arguments.c_str());
+        psl->SetWorkingDirectory(cwd.c_str());
+        psl->SetIconLocation(iconPath.c_str(), 0);
+
+        // Query IShellLink for the IPersistFile interface, used for saving the
+        // shortcut in persistent storage.
+        hr = psl->QueryInterface(IID_IPersistFile, (LPVOID *)&ppf);
+
+        if (SUCCEEDED(hr))
+        {
+            // Save the link by calling IPersistFile::Save.
+            hr = ppf->Save(destPath.c_str(), TRUE);
+            ppf->Release();
+            return Napi::Boolean::New(info.Env(), SUCCEEDED(hr));
+        }
+        psl->Release();
+    }
+    return Napi::Boolean::New(info.Env(), SUCCEEDED(hr));
+}
+
 Napi::Object Init(Napi::Env env, Napi::Object exports)
 {
     exports.Set("getAppInstallerUri", Napi::Function::New(env, GetURI, "getAppInstallerUri"));
     exports.Set("getWindowsVersion", Napi::Function::New(env, GetWindowsVersion, "getWindowsVersion"));
     exports.Set("setWindowBlur", Napi::Function::New(env, SetWindowBlur, "setWindowBlur"));
     exports.Set("setMica", Napi::Function::New(env, SetMica, "setMica"));
+    exports.Set("createShortcut", Napi::Function::New(env, CreateShortcut, "createShortcut"));
     return exports;
 }
 
