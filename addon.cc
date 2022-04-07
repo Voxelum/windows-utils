@@ -111,80 +111,15 @@ std::string make_string(const std::wstring &wstring)
     return std::string(utf8.get());
 }
 
-Napi::String Initialize(const Napi::CallbackInfo &info)
+Napi::Number Initialize(const Napi::CallbackInfo &info)
 {
     bool isMultiThread = info[0].As<Napi::Boolean>();
-    // auto result = WINRT_RoInitialize(static_cast<uint32_t>(isMultiThread ? winrt::apartment_type::multi_threaded : winrt::apartment_type::single_threaded));
-    // if (result < 0)
-    // {
-    //     return Napi::Number::New(info.Env(), result);
-    // }
-    // return Napi::Number::New(info.Env(), 0);
-    try
+    auto result = WINRT_RoInitialize(static_cast<uint32_t>(isMultiThread ? winrt::apartment_type::multi_threaded : winrt::apartment_type::single_threaded));
+    if (result < 0)
     {
-        winrt::init_apartment(isMultiThread ? winrt::apartment_type::multi_threaded : winrt::apartment_type::single_threaded);
-        return Napi::String::New(info.Env(), "");
+        return Napi::Number::New(info.Env(), result);
     }
-    // catch (winrt::bad_alloc e)
-    // {
-    //     return Napi::String::New(info.Env(), "bad_alloc");
-    // }
-    catch (winrt::hresult_access_denied e)
-    {
-        return Napi::String::New(info.Env(), "hresult_access_denied");
-    }
-    catch (winrt::hresult_wrong_thread e)
-    {
-        return Napi::String::New(info.Env(), "hresult_wrong_thread");
-    }
-    catch (winrt::hresult_not_implemented e)
-    {
-        return Napi::String::New(info.Env(), "hresult_not_implemented");
-    }
-    catch (winrt::hresult_invalid_argument e)
-    {
-        return Napi::String::New(info.Env(), "hresult_invalid_argument");
-    }
-    catch (winrt::hresult_out_of_bounds e)
-    {
-        return Napi::String::New(info.Env(), "hresult_out_of_bounds");
-    }
-    catch (winrt::hresult_no_interface e)
-    {
-        return Napi::String::New(info.Env(), "hresult_no_interface");
-    }
-    catch (winrt::hresult_class_not_available e)
-    {
-        return Napi::String::New(info.Env(), "hresult_class_not_available");
-    }
-    catch (winrt::hresult_changed_state e)
-    {
-        return Napi::String::New(info.Env(), "hresult_changed_state");
-    }
-    catch (winrt::hresult_illegal_method_call e)
-    {
-        return Napi::String::New(info.Env(), "hresult_illegal_method_call");
-    }
-    catch (winrt::hresult_illegal_state_change e)
-    {
-        return Napi::String::New(info.Env(), "hresult_illegal_state_change");
-    }
-    catch (winrt::hresult_illegal_delegate_assignment e)
-    {
-        return Napi::String::New(info.Env(), "hresult_illegal_delegate_assignment");
-    }
-    catch (winrt::hresult_canceled e)
-    {
-        return Napi::String::New(info.Env(), "hresult_canceled");
-    }
-    catch (winrt::hresult_error e)
-    {
-        return Napi::String::New(info.Env(), "hresult_error");
-    }
-    catch (...)
-    {
-        return Napi::String::New(info.Env(), "unknown_error");
-    }
+    return Napi::Number::New(info.Env(), 0);
 }
 
 Napi::String GetURI(const Napi::CallbackInfo &info)
@@ -275,11 +210,11 @@ Napi::Value InstallUpdateByAppInstaller(const Napi::CallbackInfo &info)
                     data[0] = static_cast<uint32_t>(state);
                     data[1] = percentage;
 
-                    // progressCb.BlockingCall(data, [](Napi::Env env, Napi::Function func, uint32_t *data) {
-                    //     func.Call({Napi::Number::New(env, data[0]),
-                    //                Napi::Number::New(env, data[1])});
-                    //     delete data;
-                    // });
+                    progressCb.BlockingCall(data, [](Napi::Env env, Napi::Function func, uint32_t *data) {
+                        func.Call({Napi::Number::New(env, data[0]),
+                                   Napi::Number::New(env, data[1])});
+                        delete data;
+                    });
                 });
 
             op->Completed = ref new AsyncOperationWithProgressCompletedHandler<DeploymentResult ^, DeploymentProgress>(
