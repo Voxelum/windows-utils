@@ -13,4 +13,4 @@ console.log(checkUpdateAvailabilityAsync((s) => {
 console.log(installUpdateByAppInstaller)
 console.log(installUpdateByAppInstaller("", () => {}, () => {}))
 console.log(initialize)
-console.log(initialize())
+console.log(initialize(true))

@@ -111,80 +111,80 @@ std::string make_string(const std::wstring &wstring)
     return std::string(utf8.get());
 }
 
-Napi::Number Initialize(const Napi::CallbackInfo &info)
+Napi::String Initialize(const Napi::CallbackInfo &info)
 {
     bool isMultiThread = info[0].As<Napi::Boolean>();
-    auto result = WINRT_RoInitialize(static_cast<uint32_t>(isMultiThread ? winrt::apartment_type::multi_threaded : winrt::apartment_type::single_threaded));
-    if (result < 0)
+    // auto result = WINRT_RoInitialize(static_cast<uint32_t>(isMultiThread ? winrt::apartment_type::multi_threaded : winrt::apartment_type::single_threaded));
+    // if (result < 0)
+    // {
+    //     return Napi::Number::New(info.Env(), result);
+    // }
+    // return Napi::Number::New(info.Env(), 0);
+    try
     {
-        return Napi::Number::New(info.Env(), result);
+        winrt::init_apartment(isMultiThread ? winrt::apartment_type::multi_threaded : winrt::apartment_type::single_threaded);
+        return Napi::String::New(info.Env(), "");
     }
-    return Napi::Number::New(info.Env(), 0);
-    // try
+    // catch (winrt::bad_alloc e)
     // {
-        // winrt::init_apartment();
-    //     return Napi::Number::New(info.Env(), 0);
+    //     return Napi::String::New(info.Env(), "bad_alloc");
     // }
-    // catch (bad_alloc e)
-    // {
-    //     return Napi::Number::New(info.Env(), 1);
-    // }
-    // catch (hresult_access_denied e)
-    // {
-    //     return Napi::Number::New(info.Env(), 2);
-    // }
-    // catch (hresult_wrong_thread e)
-    // {
-    //     return Napi::Number::New(info.Env(), 3);
-    // }
-    // catch (hresult_not_implemented e)
-    // {
-    //     return Napi::Number::New(info.Env(), 4);
-    // }
-    // catch (hresult_invalid_argument e)
-    // {
-    //     return Napi::Number::New(info.Env(), 5);
-    // }
-    // catch (hresult_out_of_bounds e)
-    // {
-    //     return Napi::Number::New(info.Env(), 6);
-    // }
-    // catch (hresult_no_interface e)
-    // {
-    //     return Napi::Number::New(info.Env(), 7);
-    // }
-    // catch (hresult_class_not_available e)
-    // {
-    //     return Napi::Number::New(info.Env(), 8);
-    // }
-    // catch (hresult_changed_state e)
-    // {
-    //     return Napi::Number::New(info.Env(), 9);
-    // }
-    // catch (hresult_illegal_method_call e)
-    // {
-    //     return Napi::Number::New(info.Env(), 10);
-    // }
-    // catch (hresult_illegal_state_change e)
-    // {
-    //     return Napi::Number::New(info.Env(), 11);
-    // }
-    // catch (hresult_illegal_delegate_assignment e)
-    // {
-    //     return Napi::Number::New(info.Env(), 12);
-    // }
-    // catch (hresult_canceled e)
-    // {
-    //     return Napi::Number::New(info.Env(), 13);
-    // }
-    // catch (hresult_error e)
-    // {
-    //     return Napi::Number::New(info.Env(), 14);
-    // }
-    // catch (...)
-    // {
-    //     return Napi::Number::New(info.Env(), 15);
-    // }
+    catch (winrt::hresult_access_denied e)
+    {
+        return Napi::String::New(info.Env(), "hresult_access_denied");
+    }
+    catch (winrt::hresult_wrong_thread e)
+    {
+        return Napi::String::New(info.Env(), "hresult_wrong_thread");
+    }
+    catch (winrt::hresult_not_implemented e)
+    {
+        return Napi::String::New(info.Env(), "hresult_not_implemented");
+    }
+    catch (winrt::hresult_invalid_argument e)
+    {
+        return Napi::String::New(info.Env(), "hresult_invalid_argument");
+    }
+    catch (winrt::hresult_out_of_bounds e)
+    {
+        return Napi::String::New(info.Env(), "hresult_out_of_bounds");
+    }
+    catch (winrt::hresult_no_interface e)
+    {
+        return Napi::String::New(info.Env(), "hresult_no_interface");
+    }
+    catch (winrt::hresult_class_not_available e)
+    {
+        return Napi::String::New(info.Env(), "hresult_class_not_available");
+    }
+    catch (winrt::hresult_changed_state e)
+    {
+        return Napi::String::New(info.Env(), "hresult_changed_state");
+    }
+    catch (winrt::hresult_illegal_method_call e)
+    {
+        return Napi::String::New(info.Env(), "hresult_illegal_method_call");
+    }
+    catch (winrt::hresult_illegal_state_change e)
+    {
+        return Napi::String::New(info.Env(), "hresult_illegal_state_change");
+    }
+    catch (winrt::hresult_illegal_delegate_assignment e)
+    {
+        return Napi::String::New(info.Env(), "hresult_illegal_delegate_assignment");
+    }
+    catch (winrt::hresult_canceled e)
+    {
+        return Napi::String::New(info.Env(), "hresult_canceled");
+    }
+    catch (winrt::hresult_error e)
+    {
+        return Napi::String::New(info.Env(), "hresult_error");
+    }
+    catch (...)
+    {
+        return Napi::String::New(info.Env(), "unknown_error");
+    }
 }
 
 Napi::String GetURI(const Napi::CallbackInfo &info)
