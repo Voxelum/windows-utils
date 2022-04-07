@@ -111,9 +111,79 @@ std::string make_string(const std::wstring &wstring)
     return std::string(utf8.get());
 }
 
-Napi::Boolean Initialize(const Napi::CallbackInfo &info)
+Napi::Number Initialize(const Napi::CallbackInfo &info)
 {
-    winrt::init_apartment();
+    auto result = WINRT_RoInitialize(static_cast<uint32_t>(winrt::apartment_type::multi_threaded));
+    if (result < 0)
+    {
+        return Napi::Number::New(info.Env(), result);
+    }
+    return Napi::Number::New(info.Env(), 0);
+    // try
+    // {
+        // winrt::init_apartment();
+    //     return Napi::Number::New(info.Env(), 0);
+    // }
+    // catch (bad_alloc e)
+    // {
+    //     return Napi::Number::New(info.Env(), 1);
+    // }
+    // catch (hresult_access_denied e)
+    // {
+    //     return Napi::Number::New(info.Env(), 2);
+    // }
+    // catch (hresult_wrong_thread e)
+    // {
+    //     return Napi::Number::New(info.Env(), 3);
+    // }
+    // catch (hresult_not_implemented e)
+    // {
+    //     return Napi::Number::New(info.Env(), 4);
+    // }
+    // catch (hresult_invalid_argument e)
+    // {
+    //     return Napi::Number::New(info.Env(), 5);
+    // }
+    // catch (hresult_out_of_bounds e)
+    // {
+    //     return Napi::Number::New(info.Env(), 6);
+    // }
+    // catch (hresult_no_interface e)
+    // {
+    //     return Napi::Number::New(info.Env(), 7);
+    // }
+    // catch (hresult_class_not_available e)
+    // {
+    //     return Napi::Number::New(info.Env(), 8);
+    // }
+    // catch (hresult_changed_state e)
+    // {
+    //     return Napi::Number::New(info.Env(), 9);
+    // }
+    // catch (hresult_illegal_method_call e)
+    // {
+    //     return Napi::Number::New(info.Env(), 10);
+    // }
+    // catch (hresult_illegal_state_change e)
+    // {
+    //     return Napi::Number::New(info.Env(), 11);
+    // }
+    // catch (hresult_illegal_delegate_assignment e)
+    // {
+    //     return Napi::Number::New(info.Env(), 12);
+    // }
+    // catch (hresult_canceled e)
+    // {
+    //     return Napi::Number::New(info.Env(), 13);
+    // }
+    // catch (hresult_error e)
+    // {
+    //     return Napi::Number::New(info.Env(), 14);
+    // }
+    // catch (...)
+    // {
+    //     return Napi::Number::New(info.Env(), 15);
+    // }
 }
 
 Napi::String GetURI(const Napi::CallbackInfo &info)
@@ -213,7 +283,7 @@ Napi::Value InstallUpdateByAppInstaller(const Napi::CallbackInfo &info)
 
             op->Completed = ref new AsyncOperationWithProgressCompletedHandler<DeploymentResult ^, DeploymentProgress>(
                 [&progressCb, &completeCb](IAsyncOperationWithProgress<DeploymentResult ^, DeploymentProgress> ^ sender,
-                              AsyncStatus const /* asyncStatus */) {
+                                           AsyncStatus const /* asyncStatus */) {
                     DeploymentResult ^ result = sender->GetResults();
                     Platform::String ^ errorText = result->ErrorText;
                     std::wstring errorTextW(errorText->Data());
