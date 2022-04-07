@@ -4,6 +4,8 @@
 #include <winrt/Windows.ApplicationModel.h>
 #include <winrt/Windows.Foundation.Metadata.h>
 #include <winrt/Windows.Management.Deployment.h>
+#include <winrt/Windows.System.Threading.Core.h>
+#include <winrt/Windows.System.Threading.h>
 
 #include "objbase.h"
 #include "objidl.h"
@@ -109,6 +111,11 @@ std::string make_string(const std::wstring &wstring)
     return std::string(utf8.get());
 }
 
+Napi::Boolean Initialize(const Napi::CallbackInfo &info)
+{
+    winrt::init_apartment();
+}
+
 Napi::String GetURI(const Napi::CallbackInfo &info)
 {
     if (winrt::Windows::Foundation::Metadata::ApiInformation::IsApiContractPresent(
@@ -197,11 +204,11 @@ Napi::Value InstallUpdateByAppInstaller(const Napi::CallbackInfo &info)
                     data[0] = static_cast<uint32_t>(state);
                     data[1] = percentage;
 
-                    progressCb.BlockingCall(data, [](Napi::Env env, Napi::Function func, uint32_t *data) {
-                        func.Call({Napi::Number::New(env, data[0]),
-                                   Napi::Number::New(env, data[1])});
-                        delete data;
-                    });
+                    // progressCb.BlockingCall(data, [](Napi::Env env, Napi::Function func, uint32_t *data) {
+                    //     func.Call({Napi::Number::New(env, data[0]),
+                    //                Napi::Number::New(env, data[1])});
+                    //     delete data;
+                    // });
                 });
 
             op->Completed = ref new AsyncOperationWithProgressCompletedHandler<DeploymentResult ^, DeploymentProgress>(
@@ -421,6 +428,7 @@ Napi::Object Init(Napi::Env env, Napi::Object exports)
                 Napi::Function::New(env, InstallUpdateByAppInstaller, "installUpdateByAppInstaller"));
     exports.Set("checkUpdateAvailabilityAsync",
                 Napi::Function::New(env, CheckUpdateAvailabilityAsync, "checkUpdateAvailabilityAsync"));
+    exports.Set("initialize", Napi::Function::New(env, Initialize, "initialize"));
     return exports;
 }
 
