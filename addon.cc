@@ -113,7 +113,8 @@ std::string make_string(const std::wstring &wstring)
 
 Napi::Number Initialize(const Napi::CallbackInfo &info)
 {
-    auto result = WINRT_RoInitialize(static_cast<uint32_t>(winrt::apartment_type::multi_threaded));
+    bool isMultiThread = info[0].As<Napi::Boolean>();
+    auto result = WINRT_RoInitialize(static_cast<uint32_t>(isMultiThread ? winrt::apartment_type::multi_threaded : winrt::apartment_type::single_threaded));
     if (result < 0)
     {
         return Napi::Number::New(info.Env(), result);
