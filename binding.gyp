@@ -9,7 +9,7 @@
       "target_name": "windows-utils",
       "cflags!": [ "-fno-exceptions" ],
       "cflags_cc!": [ "-fno-exceptions" ],
-      "sources": [ "addon.cc" ],
+      "sources": [ ],
       "include_dirs": [
         "<!@(node -p \"require('node-addon-api').include\")"
       ],
