@@ -9,3 +9,6 @@ build/Release/obj
 *.vcxproj.filters
 *.sln
 .vscode
+*.gyp
+*.gypi
+*.cc
