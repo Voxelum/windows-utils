@@ -1,5 +1,9 @@
-const native = require('./build/Release/windows-utils.node');
+if (require('os').platform() === 'win32') {
+    module.exports = {
+        ...require('./build/Release/windows-utils.node'),
+    }
+} else {
+    module.exports = {
 
-module.exports = {
-    ...native,
+    }
 }
