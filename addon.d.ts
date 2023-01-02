@@ -6,6 +6,8 @@ export function createShortcut(exePath: string, destination: string, arguments: 
 export function getPackageFamilyName(): string
 export function checkUpdateAvailabilityAsync(callback: (status: number) => void): boolean
 export function initialize(multithreaded: boolean): number
+export function protectData(dataToEncrypt: Uint8Array, optionalEntropy: Uint8Array, scope: string): Uint8Array
+export function unprotectData(encryptData: Uint8Array, optionalEntropy: Uint8Array, scope: string): Uint8Array
 
 export interface InstallProgressHandler {
     (state: DeploymentProgressState, progress: number): void

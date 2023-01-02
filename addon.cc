@@ -4,6 +4,7 @@
 #include <winrt/Windows.ApplicationModel.h>
 #include <winrt/Windows.Foundation.Metadata.h>
 #include <winrt/Windows.Management.Deployment.h>
+#include <winrt/Windows.ApplicationModel.Resources.Core.h>
 #include <winrt/Windows.System.Threading.Core.h>
 #include <winrt/Windows.System.Threading.h>
 
@@ -11,6 +12,7 @@
 #include "objidl.h"
 #include "shlguid.h"
 #include "shobjidl.h"
+#include "dpapi_addon.h"
 
 using namespace Windows::Foundation;
 using namespace Windows::ApplicationModel;
@@ -422,6 +424,16 @@ Napi::Boolean CreateShortcut(const Napi::CallbackInfo &info)
     return Napi::Boolean::New(info.Env(), SUCCEEDED(hr));
 }
 
+Napi::Value protectData(const Napi::CallbackInfo& info)
+{
+	return ProtectDataCommon(true, info);
+}
+
+Napi::Value unprotectData(const Napi::CallbackInfo& info)
+{
+	return ProtectDataCommon(false, info);
+}
+
 Napi::Object Init(Napi::Env env, Napi::Object exports)
 {
     exports.Set("getAppInstallerUri", Napi::Function::New(env, GetURI, "getAppInstallerUri"));
@@ -434,6 +446,10 @@ Napi::Object Init(Napi::Env env, Napi::Object exports)
                 Napi::Function::New(env, InstallUpdateByAppInstaller, "installUpdateByAppInstaller"));
     exports.Set("checkUpdateAvailabilityAsync",
                 Napi::Function::New(env, CheckUpdateAvailabilityAsync, "checkUpdateAvailabilityAsync"));
+    exports.Set(Napi::String::New(env, "protectData"),
+		Napi::Function::New(env, protectData, "protectData"));
+	exports.Set(Napi::String::New(env, "unprotectData"),
+		Napi::Function::New(env, unprotectData, "unprotectData"));
     exports.Set("initialize", Napi::Function::New(env, Initialize, "initialize"));
     return exports;
 }

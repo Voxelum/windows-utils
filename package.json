@@ -14,6 +14,6 @@
   "author": "ci010 <cijhn@hotmail.com>",
   "license": "MIT",
   "devDependencies": {
-    "node-addon-api": "^4.3.0"
+    "node-addon-api": "^5.0.0"
   }
 }

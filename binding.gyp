@@ -16,9 +16,11 @@
       'defines': [ ],
       "conditions": [
         ["OS=='win'", {
-          "libraries": ["-lruntimeobject.lib"],
+          "libraries": ["-lruntimeobject.lib", "-lcrypt32.lib"],
           "sources": [
-            "addon.cc"
+            "dpapi_win.cpp",
+            "addon.cc",
+            "dpapi_addon.h"
           ]
         }],
         ["WIN_VER==\"v10\"", {
